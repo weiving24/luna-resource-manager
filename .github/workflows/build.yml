@@ -34,7 +34,7 @@ jobs:
     - name: Package binary
       run: |
         mkdir -p release
-        cp bin/luna-resource-manager release/ || echo "Check bin path"
+        cp bin/luna-resource-manager release/
         cp README.md release/
         cp LICENSE release/
         cd release && tar -czvf luna-resource-manager-linux-${{ matrix.arch }}.tar.gz *
@@ -46,10 +46,14 @@ jobs:
         path: release/luna-resource-manager-linux-${{ matrix.arch }}.tar.gz
 
   build-macos:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        arch: [x86_64, arm64]
+        include:
+          - os: macos-13
+            arch: x86_64
+          - os: macos-14
+            arch: arm64
 
     steps:
     - name: Checkout code
@@ -63,7 +67,8 @@ jobs:
       run: |
         NCURSES_PREFIX=$(brew --prefix ncurses)
         LIBARCHIVE_PREFIX=$(brew --prefix libarchive)
-        make CC="clang -arch ${{ matrix.arch }}" \
+        
+        make CC="clang" \
              CPPFLAGS="-D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -I. -Iinclude -Iuidl -Iprt -Icore -Iapp -I${NCURSES_PREFIX}/include -I${LIBARCHIVE_PREFIX}/include" \
              LDFLAGS="-L${NCURSES_PREFIX}/lib -L${LIBARCHIVE_PREFIX}/lib" \
              CURSES_LIBS="${NCURSES_PREFIX}/lib/libncursesw.a" \
@@ -72,7 +77,7 @@ jobs:
     - name: Package binary
       run: |
         mkdir -p release
-        cp bin/luna-resource-manager release/ || echo "Check bin path"
+        cp bin/luna-resource-manager release/
         cp README.md release/
         cp LICENSE release/
         cd release && tar -czvf luna-resource-manager-macos-${{ matrix.arch }}.tar.gz *
