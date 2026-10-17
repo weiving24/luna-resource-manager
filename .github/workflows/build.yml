@@ -64,8 +64,10 @@ jobs:
         NCURSES_PREFIX=$(brew --prefix ncurses)
         LIBARCHIVE_PREFIX=$(brew --prefix libarchive)
         make CC="clang -arch ${{ matrix.arch }}" \
-             CFLAGS="-I${NCURSES_PREFIX}/include -I${LIBARCHIVE_PREFIX}/include" \
-             LDFLAGS="-L${NCURSES_PREFIX}/lib -L${LIBARCHIVE_PREFIX}/lib"
+             CPPFLAGS="-D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -I. -Iinclude -Iuidl -Iprt -Icore -Iapp -I${NCURSES_PREFIX}/include -I${LIBARCHIVE_PREFIX}/include" \
+             LDFLAGS="-L${NCURSES_PREFIX}/lib -L${LIBARCHIVE_PREFIX}/lib" \
+             CURSES_LIBS="-lncursesw" \
+             ARCHIVE_LIBS="-larchive"
 
     - name: Package binary
       run: |
