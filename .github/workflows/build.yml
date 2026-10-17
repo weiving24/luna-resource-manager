@@ -17,48 +17,42 @@ jobs:
         include:
           - os: ubuntu-latest
             arch: x86_64
-            use_docker: false
+            cc: gcc
+            extra_deps: ""
           - os: ubuntu-24.04-arm
             arch: aarch64
-            use_docker: false
-          # 使用 32 位 x86 Docker 原生编译
+            cc: gcc
+            extra_deps: ""
+          # 原生的 32 位 x86 编译任务
           - os: ubuntu-latest
             arch: i386
-            use_docker: "i386/ubuntu:latest"
-          # 使用 32 位 ARM Docker 原生编译（利用 QEMU 模拟）
-          - os: ubuntu-latest
-            arch: armv7l
-            use_docker: "arm32v7/ubuntu:latest"
+            cc: "gcc -m32"
+            extra_deps: "gcc-multilib libncurses-dev:i386 libarchive-dev:i386"
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Build Natively (x86_64 & aarch64)
-      if: matrix.use_docker == false
+    - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential libncurses-dev libarchive-dev pkg-config
-        make
+        if [ "${{ matrix.arch }}" = "i386" ]; then
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+        fi
+        sudo apt-get install -y build-essential pkg-config ${{ matrix.extra_deps }} \
+          $(if [ "${{ matrix.arch }}" != "i386" ]; then echo "libncurses-dev libarchive-dev"; fi)
+
+    - name: Build project
+      run: make CC="${{ matrix.cc }}"
+
+    - name: Package binary
+      run: |
         mkdir -p release
         cp bin/luna-resource-manager release/
         cp README.md release/
         cp LICENSE release/
         cd release && tar -czvf luna-resource-manager-linux-${{ matrix.arch }}.tar.gz *
-
-    - name: Build in Docker (i386 & armv7l)
-      if: matrix.use_docker != false
-      run: |
-        docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace ${{ matrix.use_docker }} /bin/bash -c "
-          apt-get update && \
-          apt-get install -y build-essential libncurses-dev libarchive-dev pkg-config && \
-          make && \
-          mkdir -p release && \
-          cp bin/luna-resource-manager release/ && \
-          cp README.md release/ && \
-          cp LICENSE release/ && \
-          cd release && tar -czvf luna-resource-manager-linux-${{ matrix.arch }}.tar.gz *
-        "
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
