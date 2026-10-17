@@ -10,10 +10,14 @@ on:
 
 jobs:
   build-linux:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        arch: [x86_64, aarch64]
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: ubuntu-24.04-arm
+            arch: aarch64
 
     steps:
     - name: Checkout code
@@ -22,20 +26,10 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        if [ "${{ matrix.arch }}" = "aarch64" ]; then
-          sudo dpkg --add-architecture arm64
-          sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $(lsb_release -cs) main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/arm64.list
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu libncurses-dev:arm64 libarchive-dev:arm64
-          echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
-        else
-          sudo apt-get install -y build-essential libncurses-dev libarchive-dev pkg-config
-          echo "CC=gcc" >> $GITHUB_ENV
-        fi
+        sudo apt-get install -y build-essential libncurses-dev libarchive-dev pkg-config
 
     - name: Build project
-      run: make CC="${{ env.CC }}"
+      run: make
 
     - name: Package binary
       run: |
@@ -69,9 +63,9 @@ jobs:
       run: |
         NCURSES_PREFIX=$(brew --prefix ncurses)
         LIBARCHIVE_PREFIX=$(brew --prefix libarchive)
-        export CFLAGS="-I${NCURSES_PREFIX}/include -I${LIBARCHIVE_PREFIX}/include"
-        export LDFLAGS="-L${NCURSES_PREFIX}/lib -L${LIBARCHIVE_PREFIX}/lib"
-        make CC="clang -arch ${{ matrix.arch }}"
+        make CC="clang -arch ${{ matrix.arch }}" \
+             CFLAGS="-I${NCURSES_PREFIX}/include -I${LIBARCHIVE_PREFIX}/include" \
+             LDFLAGS="-L${NCURSES_PREFIX}/lib -L${LIBARCHIVE_PREFIX}/lib"
 
     - name: Package binary
       run: |
@@ -95,8 +89,8 @@ jobs:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
-        path: artifacts
-        merge-multiple: true
+      path: artifacts
+      merge-multiple: true
 
     - name: Release
       uses: softprops/action-gh-release@v2
