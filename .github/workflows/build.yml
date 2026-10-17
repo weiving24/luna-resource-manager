@@ -31,13 +31,15 @@ jobs:
         fi
 
     - name: Build project
-      run: |
-        make CC=${{ env.CC }} || make
+      run: make CC=${{ env.CC }} || make
+
+    - name: Run tests
+      run: make test
 
     - name: Package binary
       run: |
         mkdir -p release
-        cp bin/luna-resource-manager release/ || echo "Check bin path in Makefile"
+        cp bin/luna-resource-manager release/ || echo "Check bin path"
         cp README.md release/
         cp LICENSE release/
         cd release && tar -czvf luna-resource-manager-linux-${{ matrix.arch }}.tar.gz *
@@ -62,8 +64,10 @@ jobs:
       run: brew install ncurses libarchive pkg-config
 
     - name: Build project
-      run: |
-        make CC="clang -arch ${{ matrix.arch }}" || make
+      run: make CC="clang -arch ${{ matrix.arch }}" || make
+
+    - name: Run tests
+      run: make test
 
     - name: Package binary
       run: |
