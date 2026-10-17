@@ -23,6 +23,10 @@ jobs:
       run: |
         sudo apt-get update
         if [ "${{ matrix.arch }}" = "aarch64" ]; then
+          sudo dpkg --add-architecture arm64
+          sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $(lsb_release -cs) main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/arm64.list
+          sudo apt-get update
           sudo apt-get install -y gcc-aarch64-linux-gnu libncurses-dev:arm64 libarchive-dev:arm64
           echo "CC=aarch64-linux-gnu-gcc" >> $GITHUB_ENV
         else
@@ -31,7 +35,7 @@ jobs:
         fi
 
     - name: Build project
-      run: make CC=${{ env.CC }} || make
+      run: make CC="${{ env.CC }}"
 
     - name: Run tests
       run: make test
@@ -61,10 +65,14 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install dependencies
-      run: brew install ncurses libarchive pkg-config
+      run: |
+        brew install ncurses libarchive pkg-config
+        LIBARCHIVE_PREFIX=$(brew --prefix libarchive)
+        echo "CPPFLAGS=-I${LIBARCHIVE_PREFIX}/include" >> $GITHUB_ENV
+        echo "LDFLAGS=-L${LIBARCHIVE_PREFIX}/lib" >> $GITHUB_ENV
 
     - name: Build project
-      run: make CC="clang -arch ${{ matrix.arch }}" || make
+      run: make CC="clang -arch ${{ matrix.arch }}"
 
     - name: Run tests
       run: make test
