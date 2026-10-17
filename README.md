@@ -1,3 +1,9 @@
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+![C99](https://img.shields.io/badge/C-C99-blue.svg)
+![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20macOS-lightgrey.svg)
+![UI](https://img.shields.io/badge/UI-curses-green.svg)
+![Archive](https://img.shields.io/badge/Archive-libarchive-orange.svg)
+
 # Luna Resource Manager
 
 Luna Resource Manager is a modular terminal file manager written in C. Its filesystem and process-management code uses POSIX APIs; its interactive terminal interface uses the curses library (ncurses, ncursesw, or a compatible implementation).
