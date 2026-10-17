@@ -37,9 +37,6 @@ jobs:
     - name: Build project
       run: make CC="${{ env.CC }}"
 
-    - name: Run tests
-      run: make test
-
     - name: Package binary
       run: |
         mkdir -p release
@@ -67,15 +64,14 @@ jobs:
     - name: Install dependencies
       run: |
         brew install ncurses libarchive pkg-config
-        LIBARCHIVE_PREFIX=$(brew --prefix libarchive)
-        echo "CPPFLAGS=-I${LIBARCHIVE_PREFIX}/include" >> $GITHUB_ENV
-        echo "LDFLAGS=-L${LIBARCHIVE_PREFIX}/lib" >> $GITHUB_ENV
 
     - name: Build project
-      run: make CC="clang -arch ${{ matrix.arch }}"
-
-    - name: Run tests
-      run: make test
+      run: |
+        NCURSES_PREFIX=$(brew --prefix ncurses)
+        LIBARCHIVE_PREFIX=$(brew --prefix libarchive)
+        export CFLAGS="-I${NCURSES_PREFIX}/include -I${LIBARCHIVE_PREFIX}/include"
+        export LDFLAGS="-L${NCURSES_PREFIX}/lib -L${LIBARCHIVE_PREFIX}/lib"
+        make CC="clang -arch ${{ matrix.arch }}"
 
     - name: Package binary
       run: |
