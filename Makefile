@@ -2,7 +2,13 @@ PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 SYSCONFDIR ?= /etc
 CC ?= cc
-CPPFLAGS += -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -I. -Iinclude -Iuidl -Iprt -Icore -Iapp
+
+PROGRAM_NAME = Luna Resource Manager
+VERSION = 0.1.2
+
+CPPFLAGS += -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -I. -Iinclude -Iuidl -Iprt -Icore -Iapp \
+            '-DPROGRAM_NAME="$(PROGRAM_NAME)"' '-DLUNA_VERSION="$(VERSION)"'
+
 CFLAGS ?= -O2
 CFLAGS += -std=c99 -Wall -Wextra -Wpedantic
 LDFLAGS ?=

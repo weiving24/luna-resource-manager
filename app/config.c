@@ -219,18 +219,41 @@ void config_apply_theme(const AppConfig *config)
     stpui_set_theme(&theme);
 }
 
-void config_print_help(const char *program)
-{
-    (void)printf("Usage: %s [options] [directory]\n\n", program != NULL ? program : "luna-resource-manager");
-    (void)printf("Options:\n");
-    (void)printf("  -h, --help             Show this help\n");
-    (void)printf("  -V, --version          Show version\n");
-    (void)printf("  -c, --config FILE      Read configuration from FILE\n\n");
-    (void)printf("Config keys: theme=default|dark|light, panel_ratio=20..80,\n");
-    (void)printf("show_header=0|1, show_statusbar=0|1, show_preview=0|1\n");
-}
+#ifndef PROGRAM_NAME
+#define PROGRAM_NAME "Luna Resource Manager"
+#endif
+#ifndef LUNA_VERSION
+#define LUNA_VERSION "unknown"
+#endif
 
 void config_print_version(void)
 {
-    (void)printf("Luna Resource Manager 1.1.0 (POSIX-oriented C file manager)\n");
+    printf("%s v%s\n", PROGRAM_NAME, LUNA_VERSION);
+    printf("Copyright (C) 2026 weiving24\n");
+    printf("License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>.\n");
+    printf("This is free software: you are free to change and redistribute it.\n");
+    printf("There is NO WARRANTY, to the extent permitted by law.\n");
+}
+
+void config_print_help(const char *program_name)
+{
+    printf("%s v%s - A modular terminal file manager in C.\n\n", PROGRAM_NAME, LUNA_VERSION);
+    
+    printf("Usage:\n");
+    printf("  %s [OPTIONS] [DIRECTORY]\n\n", program_name);
+    
+    printf("Options:\n");
+    printf("  -h, --help       Show this help message and exit\n");
+    printf("  -V, --version    Show version, copyright, and license information\n");
+    printf("  -c, --config FILE Specify a configuration file to load\n\n");
+    
+    printf("Description:\n");
+    printf("  A lightweight, keyboard-driven file manager for POSIX systems\n");
+    printf("  (Linux, macOS). Supports archive previews (ZIP, TAR, 7z) via libarchive.\n");
+    printf("  Once inside the TUI, press '?' or F1 to view the key bindings.\n\n");
+    
+    printf("Author & License:\n");
+    printf("  Author:   weiving24 (https://github.com/weiving24)\n");
+    printf("  License:  GNU GPLv3 (https://www.gnu.org/licenses/gpl-3.0.html)\n");
+    printf("  Warranty: THIS SOFTWARE COMES WITH ABSOLUTELY NO WARRANTY.\n");
 }
