@@ -60,8 +60,8 @@ static int config_assign(AppConfig *config, const char *key, const char *value)
     long number;
     int boolean;
     if (strcmp(key, "theme") == 0) {
-        if (strcmp(value, "default") != 0 && strcmp(value, "dark") != 0 &&
-            strcmp(value, "light") != 0) {
+        StpTheme theme;
+        if (stpui_theme_named(value, &theme) != 0) {
             errno = EINVAL;
             return -1;
         }
@@ -210,11 +210,7 @@ void config_apply_theme(const AppConfig *config)
     StpTheme theme;
     if (config == NULL)
         return;
-    if (strcmp(config->theme, "dark") == 0)
-        stpui_theme_dark(&theme);
-    else if (strcmp(config->theme, "light") == 0)
-        stpui_theme_light(&theme);
-    else
+    if (stpui_theme_named(config->theme, &theme) != 0)
         stpui_theme_default(&theme);
     stpui_set_theme(&theme);
 }

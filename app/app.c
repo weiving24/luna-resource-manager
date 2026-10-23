@@ -15,6 +15,7 @@
 #include "config.h"
 #include "controller.h"
 #include "state.h"
+#include "easter_egg.h"
 
 #ifndef PATH_MAX
 #define PATH_MAX 4096
@@ -226,6 +227,14 @@ int app_run(int argc, char **argv)
     int i;
     int result;
     int lock_result;
+
+    /*
+     * Easter egg: print the embedded ASCII artwork and exit.
+     * This must run before configuration loading, instance locking,
+     * state initialization, and terminal UI initialization.
+     */
+    if (argc == 2 && strcmp(argv[1], "--eseg") == 0)
+        return easter_egg_print();
 
     for (i = 1; i < argc; ++i) {
         if (!options_finished && strcmp(argv[i], "--") == 0) {

@@ -1,1 +1,12 @@
-0.1.2
+0.1.3-rc1
+
+Functional changes:
+
+- Added `--eseg` easter egg command: prints ASCII artwork and exits immediately, running before config loading, instance locking, state initialization, and UI initialization
+- Added RGB true-color theme support: StpStyle gains fg_rgb/bg_rgb/use_fg_rgb/use_bg_rgb fields; colors registered dynamically via init_color() when the terminal supports it, otherwise falls back to the nearest basic color; color pairs are now allocated on demand with caching
+- Added built-in themes: nord, dracula, monokai, solarized-dark, gruvbox, purple, pink
+- Added custom theme file loading via stpui_theme_load(), supporting [section] blocks (header/status/dir/file/focus/separator/input/preview) and fg/bg (color name or #RRGGBB) plus bold/reverse/underline attributes
+- Config `theme` validation now calls stpui_theme_named() for dynamic validation, so new themes require no changes to validation code
+- Default config theme changed to pink
+- Executable renamed to ckresmgr; program name displays as Luna Resource Manager (ckresmgr)
+- light/dark theme colors adjusted (light header now white on blue, focus bolded, etc.)

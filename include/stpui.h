@@ -28,6 +28,10 @@ typedef struct {
     uint8_t bold;
     uint8_t reverse;
     uint8_t underline;
+    uint32_t fg_rgb;       /* 0xRRGGBB */
+    uint32_t bg_rgb;       /* 0xRRGGBB */
+    uint8_t use_fg_rgb;
+    uint8_t use_bg_rgb;
 } StpStyle;
 
 typedef enum {
@@ -102,6 +106,8 @@ typedef struct {
 void stpui_theme_default(StpTheme *theme);
 void stpui_theme_dark(StpTheme *theme);
 void stpui_theme_light(StpTheme *theme);
+int stpui_theme_named(const char *name, StpTheme *theme);
+int stpui_theme_load(const char *path, StpTheme *theme);
 
 #ifdef __cplusplus
 }
