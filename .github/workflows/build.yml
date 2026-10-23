@@ -23,7 +23,6 @@ jobs:
             arch: aarch64
             cc: gcc
             extra_deps: ""
-          # 原生的 32 位 x86 编译任务
           - os: ubuntu-latest
             arch: i386
             cc: "gcc -m32"
@@ -49,16 +48,16 @@ jobs:
     - name: Package binary
       run: |
         mkdir -p release
-        cp bin/luna-resource-manager release/
+        cp bin/ckresmgr release/
         cp README.md release/
         cp LICENSE release/
-        cd release && tar -czvf luna-resource-manager-linux-${{ matrix.arch }}.tar.gz *
+        cd release && tar -czvf ckresmgr-linux-${{ matrix.arch }}.tar.gz *
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: luna-resource-manager-linux-${{ matrix.arch }}
-        path: release/luna-resource-manager-linux-${{ matrix.arch }}.tar.gz
+        name: ckresmgr-linux-${{ matrix.arch }}
+        path: release/ckresmgr-linux-${{ matrix.arch }}.tar.gz
 
   build-macos:
     runs-on: macos-14
@@ -74,24 +73,24 @@ jobs:
         NCURSES_PREFIX=$(brew --prefix ncurses)
         LIBARCHIVE_PREFIX=$(brew --prefix libarchive)
         make CC="clang" \
-             CPPFLAGS="-D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -I. -Iinclude -Iuidl -Iprt -Icore -Iapp -I${NCURSES_PREFIX}/include -I${LIBARCHIVE_PREFIX}/include" \
-             LDFLAGS="-L${NCURSES_PREFIX}/lib -L${LIBARCHIVE_PREFIX}/lib" \
-             CURSES_LIBS="-lncursesw" \
-             ARCHIVE_LIBS="-larchive"
+          CPPFLAGS="-D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 -I. -Iinclude -Iuidl -Iprt -Icore -Iapp -I${NCURSES_PREFIX}/include -I${LIBARCHIVE_PREFIX}/include" \
+          LDFLAGS="-L${NCURSES_PREFIX}/lib -L${LIBARCHIVE_PREFIX}/lib" \
+          CURSES_LIBS="-lncursesw" \
+          ARCHIVE_LIBS="-larchive"
 
     - name: Package binary
       run: |
         mkdir -p release
-        cp bin/luna-resource-manager release/
+        cp bin/ckresmgr release/
         cp README.md release/
         cp LICENSE release/
-        cd release && tar -czvf luna-resource-manager-macos-arm64.tar.gz *
+        cd release && tar -czvf ckresmgr-macos-arm64.tar.gz *
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: luna-resource-manager-macos-arm64
-        path: release/luna-resource-manager-macos-arm64.tar.gz
+        name: ckresmgr-macos-arm64
+        path: release/ckresmgr-macos-arm64.tar.gz
 
   publish-release:
     needs: [build-linux, build-macos]
@@ -108,3 +107,4 @@ jobs:
       uses: softprops/action-gh-release@v2
       with:
         files: artifacts/*.tar.gz
+        prerelease: ${{ contains(github.ref, '-rc') }}
