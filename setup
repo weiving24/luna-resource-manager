@@ -1,0 +1,314 @@
+#!/usr/bin/env sh
+# Luna Resource Manager setup script (requires dialog)
+
+set -eu
+
+BIN_NAME="ckresmgr"
+BIN_SRC="bin/$BIN_NAME"
+CONF_SRC="config/theme.conf"
+CONF_APP="luna-resource-manager"
+CONF_NAME="config.conf"
+LICENSE_FILE="LICENSE"
+BACKTITLE="Luna Resource Manager Setup"
+
+# ---- check dialog ----
+if ! command -v dialog >/dev/null 2>&1; then
+    echo "Error: 'dialog' is required but not installed."
+    echo ""
+    echo "Install it first:"
+    echo "  Debian/Ubuntu:  sudo apt install dialog"
+    echo "  macOS:          brew install dialog"
+    exit 1
+fi
+
+# ---- check package files ----
+for f in "$BIN_SRC" "$CONF_SRC" "$LICENSE_FILE"; do
+    if [ ! -e "$f" ]; then
+        dialog --backtitle "$BACKTITLE" --title " Error " \
+            --msgbox "$f not found.\nRun this script from the extracted directory." 8 60
+        exit 1
+    fi
+done
+
+# ---- generic dependency check ----
+check_deps() {
+    missing=""
+    os="$(uname -s)"
+
+    if [ "$os" = "Linux" ] && command -v ldd >/dev/null 2>&1; then
+        if ldd "$BIN_SRC" 2>/dev/null | grep -q "not found"; then
+            missing=$(ldd "$BIN_SRC" 2>/dev/null | awk '/not found/ {print $1}' | tr '\n' ' ')
+        fi
+    elif [ "$os" = "Darwin" ] && command -v otool >/dev/null 2>&1; then
+        for lib in $(otool -L "$BIN_SRC" 2>/dev/null | awk 'NR>1 {print $1}'); do
+            case "$lib" in
+                @rpath/*|@loader_path/*|@executable_path/*) ;;
+                /usr/lib/*|/System/*) ;;
+                *)
+                    if [ ! -e "$lib" ]; then
+                        missing="$missing $(basename "$lib")"
+                    fi
+                    ;;
+            esac
+        done
+    else
+        lib_available() {
+            name="$1"
+            pcname="$2"
+
+            if command -v pkg-config >/dev/null 2>&1; then
+                if pkg-config --exists "$pcname" 2>/dev/null; then
+                    return 0
+                fi
+            fi
+
+            if command -v ldconfig >/dev/null 2>&1; then
+                if ldconfig -p 2>/dev/null | grep -q "$name"; then
+                    return 0
+                fi
+            fi
+
+            for d in ${LD_LIBRARY_PATH:-} ${DYLD_LIBRARY_PATH:-}; do
+                [ -n "$d" ] || continue
+                if ls "$d"/"$name"* >/dev/null 2>&1; then
+                    return 0
+                fi
+            done
+
+            for root in /usr /usr/local /opt /opt/homebrew /opt/local /nix/store "$HOME/.local" "$HOME"; do
+                if ls "$root"/lib/"$name"* "$root"/lib64/"$name"* "$root"/lib32/"$name"* >/dev/null 2>&1; then
+                    return 0
+                fi
+            done
+
+            return 1
+        }
+
+        if ! lib_available "libncursesw" "ncursesw"; then
+            missing="$missing libncursesw"
+        fi
+        if ! lib_available "libarchive" "libarchive"; then
+            missing="$missing libarchive"
+        fi
+    fi
+
+    if [ -n "$missing" ]; then
+        dialog --backtitle "$BACKTITLE" --title " Missing Dependencies " \
+            --msgbox "The following shared libraries could not be resolved:\n\n$missing\n\nIf they are installed in a non-standard location, make sure\nthat location is in LD_LIBRARY_PATH (Linux) or DYLD_LIBRARY_PATH (macOS),\nor registered with ldconfig / pkg-config.\n\nInstall them first, then re-run setup." 16 68
+        return 1
+    fi
+    return 0
+}
+
+check_deps || exit 1
+
+# ---- show license (display only; OK to continue) ----
+show_license() {
+    dialog --backtitle "$BACKTITLE" \
+        --title " License (GPLv3) " \
+        --ok-button "OK" \
+        --textbox "$LICENSE_FILE" 22 78 || true
+}
+
+# ---- ask install scope (default or custom) ----
+# Sets: BINDIR, CONF_FILE, CONFDIR, SUDO
+ask_scope() {
+    SCOPE=$(dialog --backtitle "$BACKTITLE" \
+        --title " Installation Scope " \
+        --cancel-button "Back" --ok-button "Select" \
+        --menu "Choose where to install:" 18 68 3 \
+        1 "User default   (~/.local/bin, ~/.config)" \
+        2 "System default (/usr/local/bin, /etc)" \
+        3 "Custom location (enter your own paths)" \
+        3>&1 1>&2 2>&3) || return 1
+
+    case "$SCOPE" in
+        1)
+            BINDIR="$HOME/.local/bin"
+            CONFDIR="$HOME/.config/$CONF_APP"
+            CONF_FILE="$CONFDIR/$CONF_NAME"
+            SUDO=""
+            ;;
+        2)
+            BINDIR="/usr/local/bin"
+            CONFDIR=""
+            CONF_FILE="/etc/$CONF_APP.conf"
+            SUDO="yes"
+            ;;
+        3)
+            CUSTOM_BINDIR=$(dialog --backtitle "$BACKTITLE" \
+                --title " Custom Install Directory " \
+                --cancel-button "Back" --ok-button "OK" \
+                --inputbox "Enter the directory where the executable should be installed:\n(e.g. /opt/ckresmgr/bin or ~/.local/bin)" 12 70 \
+                3>&1 1>&2 2>&3) || return 1
+            [ -n "$CUSTOM_BINDIR" ] || return 1
+            BINDIR="$CUSTOM_BINDIR"
+
+            CUSTOM_CONF=$(dialog --backtitle "$BACKTITLE" \
+                --title " Custom Config File " \
+                --cancel-button "Back" --ok-button "OK" \
+                --inputbox "Enter the full path for the config file:\n(e.g. ~/.config/luna-resource-manager/config.conf)" 12 70 \
+                "$HOME/.config/$CONF_APP/$CONF_NAME" \
+                3>&1 1>&2 2>&3) || return 1
+            [ -n "$CUSTOM_CONF" ] || return 1
+            CONF_FILE="$CUSTOM_CONF"
+            CONFDIR="$(dirname "$CONF_FILE")"
+
+            # Decide whether sudo is needed based on writability of the targets.
+            if [ -w "$BINDIR" ] 2>/dev/null || [ -w "$(dirname "$BINDIR")" ] 2>/dev/null; then
+                SUDO=""
+            else
+                SUDO="yes"
+            fi
+            ;;
+    esac
+    return 0
+}
+
+# ---- main menu ----
+CHOICE=$(dialog --backtitle "$BACKTITLE" \
+    --title " Main Menu " \
+    --cancel-button "Exit" --ok-button "Select" \
+    --default-item "1" \
+    --menu "Use arrow keys to move, Enter to select." 17 60 3 \
+    1 "Install" \
+    2 "Uninstall" \
+    3 "Exit" \
+    3>&1 1>&2 2>&3) || exit 0
+
+clear
+
+case "$CHOICE" in
+    1)
+        # ===== INSTALL =====
+        # Step 1: show license first, press OK to continue
+        clear
+        show_license
+
+        # Step 2: choose install location (default or custom)
+        ask_scope || exit 0
+
+        # Step 3: choose whether to install config
+        if dialog --backtitle "$BACKTITLE" --title " Configuration File " \
+            --yes-button "Install" --no-button "Skip" \
+            --yesno "Install the sample configuration file?\n\nThe application works fine without it (built-in defaults).\n\nTarget:\n  $CONF_FILE" 13 66 \
+            3>&1 1>&2 2>&3; then
+            INSTALL_CONF=1
+        else
+            INSTALL_CONF=0
+        fi
+
+        SUMMARY="  Binary: $BINDIR/$BIN_NAME"
+        if [ "$INSTALL_CONF" -eq 1 ]; then
+            SUMMARY="$SUMMARY\n  Config: $CONF_FILE"
+        else
+            SUMMARY="$SUMMARY\n  Config: (skipped, built-in defaults)"
+        fi
+
+        # Step 4: confirm
+        dialog --backtitle "$BACKTITLE" --title " Confirm Installation " \
+            --yes-button "Install" --no-button "Cancel" \
+            --yesno "The following will be installed:\n\n$SUMMARY\n\nProceed?" 13 66 \
+            3>&1 1>&2 2>&3 || exit 0
+
+        clear
+
+        # Step 5: install
+        if [ "$SUDO" = "yes" ]; then
+            sudo mkdir -p "$BINDIR"
+            sudo install -m 755 "$BIN_SRC" "$BINDIR/$BIN_NAME"
+        else
+            mkdir -p "$BINDIR"
+            install -m 755 "$BIN_SRC" "$BINDIR/$BIN_NAME"
+        fi
+
+        if [ "$INSTALL_CONF" -eq 1 ]; then
+            if [ "$SUDO" = "yes" ]; then
+                sudo mkdir -p "$(dirname "$CONF_FILE")"
+                sudo install -m 644 "$CONF_SRC" "$CONF_FILE"
+            else
+                mkdir -p "$CONFDIR"
+                install -m 644 "$CONF_SRC" "$CONF_FILE"
+            fi
+        fi
+
+        EXTRA=""
+        case ":$PATH:" in
+            *":$BINDIR:"*) ;;
+            *) EXTRA="\n\nNote: $BINDIR is not in your PATH.\nAdd it to your shell profile to run '$BIN_NAME' directly." ;;
+        esac
+
+        dialog --backtitle "$BACKTITLE" --title " Installation Complete " \
+            --msgbox "Done.\n\n  Binary: $BINDIR/$BIN_NAME$EXTRA" 12 66
+        clear
+        ;;
+
+    2)
+        # ===== UNINSTALL =====
+        SCOPE=$(dialog --backtitle "$BACKTITLE" \
+            --title " Uninstall Scope " \
+            --cancel-button "Back" --ok-button "Select" \
+            --menu "Remove from which location?" 18 68 3 \
+            1 "User default   (~/.local/bin, ~/.config)" \
+            2 "System default (/usr/local/bin, /etc)" \
+            3 "Custom location (enter paths to remove)" \
+            3>&1 1>&2 2>&3) || exit 0
+
+        case "$SCOPE" in
+            1)
+                BINDIR="$HOME/.local/bin"
+                CONF_FILE="$HOME/.config/$CONF_APP/$CONF_NAME"
+                SUDO=""
+                ;;
+            2)
+                BINDIR="/usr/local/bin"
+                CONF_FILE="/etc/$CONF_APP.conf"
+                SUDO="yes"
+                ;;
+            3)
+                BINDIR=$(dialog --backtitle "$BACKTITLE" \
+                    --title " Custom Uninstall Directory " \
+                    --cancel-button "Back" --ok-button "OK" \
+                    --inputbox "Enter the directory containing the executable:" 12 70 \
+                    3>&1 1>&2 2>&3) || exit 0
+                [ -n "$BINDIR" ] || exit 0
+
+                CONF_FILE=$(dialog --backtitle "$BACKTITLE" \
+                    --title " Custom Config File " \
+                    --cancel-button "Back" --ok-button "OK" \
+                    --inputbox "Enter the config file path to remove (leave as-is if unknown):" 12 70 \
+                    "$HOME/.config/$CONF_APP/$CONF_NAME" \
+                    3>&1 1>&2 2>&3) || exit 0
+
+                if [ -w "$BINDIR" ] 2>/dev/null || [ -w "$(dirname "$BINDIR")" ] 2>/dev/null; then
+                    SUDO=""
+                else
+                    SUDO="yes"
+                fi
+                ;;
+        esac
+
+        dialog --backtitle "$BACKTITLE" --title " Confirm Uninstall " \
+            --yes-button "Remove" --no-button "Cancel" \
+            --yesno "The following will be removed:\n\n  $BINDIR/$BIN_NAME\n  $CONF_FILE (if present)\n\nProceed?" 12 66 \
+            3>&1 1>&2 2>&3 || exit 0
+
+        clear
+
+        if [ "$SUDO" = "yes" ]; then
+            sudo rm -f "$BINDIR/$BIN_NAME"
+            [ -n "$CONF_FILE" ] && sudo rm -f "$CONF_FILE"
+        else
+            rm -f "$BINDIR/$BIN_NAME"
+            [ -n "$CONF_FILE" ] && rm -f "$CONF_FILE"
+        fi
+
+        dialog --backtitle "$BACKTITLE" --title " Uninstall Complete " \
+            --msgbox "Done." 8 50
+        clear
+        ;;
+
+    3)
+        exit 0
+        ;;
+esac

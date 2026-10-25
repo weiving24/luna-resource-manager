@@ -4,7 +4,7 @@ SYSCONFDIR ?= /etc
 
 CC ?= cc
 PROGRAM_NAME = Luna Resource Manager (ckresmgr)
-VERSION = 0.1.3-rc1
+VERSION = 0.1.3
 
 GREEN  := \033[32m
 CYAN   := \033[36m
@@ -21,7 +21,7 @@ CPPFLAGS += -D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700 \
 
 CFLAGS ?= -O2
 CFLAGS += -std=c99 -Wall -Wextra -Wpedantic
-LDFLAGS ?=
+LDFLAGS ?= -s
 
 CURSES_CFLAGS ?=
 CURSES_LIBS ?= $(shell pkg-config --libs ncursesw 2>/dev/null || \

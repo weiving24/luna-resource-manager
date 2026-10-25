@@ -47,10 +47,14 @@ jobs:
 
     - name: Package binary
       run: |
-        mkdir -p release
-        cp bin/ckresmgr release/
+        mkdir -p release/bin release/config
+        cp bin/ckresmgr release/bin/
+        cp config/theme.conf release/config/
+        cp setup release/
         cp README.md release/
         cp LICENSE release/
+        cp versioninfo release/ 2>/dev/null || true
+        chmod +x release/setup
         cd release && tar -czvf ckresmgr-linux-${{ matrix.arch }}.tar.gz *
 
     - name: Upload artifact
@@ -80,10 +84,14 @@ jobs:
 
     - name: Package binary
       run: |
-        mkdir -p release
-        cp bin/ckresmgr release/
+        mkdir -p release/bin release/config
+        cp bin/ckresmgr release/bin/
+        cp config/theme.conf release/config/
+        cp setup release/
         cp README.md release/
         cp LICENSE release/
+        cp versioninfo release/ 2>/dev/null || true
+        chmod +x release/setup
         cd release && tar -czvf ckresmgr-macos-arm64.tar.gz *
 
     - name: Upload artifact
