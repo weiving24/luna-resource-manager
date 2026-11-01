@@ -88,3 +88,5 @@ The built-in text viewer handles ordinary text files; executable files can be ru
 - `tests/test_fs.c`: filesystem regression tests
 
 `make clean` removes generated binaries and object files. The source archive intentionally excludes build products.
+
+[![Powered by DartNode](https://dartnode.com/branding/DN-Open-Source-sm.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")
